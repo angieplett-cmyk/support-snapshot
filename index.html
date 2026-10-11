@@ -151,6 +151,8 @@ h3{font-size:1.05rem;margin:0 0 8px}
 .maprow2 select{min-height:40px;padding:6px 8px;font-size:.88rem}
 .maplist{max-height:none}
 .svcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0 10px}
+.noaccs{background:var(--brand-tint);border:1.5px solid var(--brand-2);font-size:1rem}
+.cmasnote{border-color:var(--tst)}
 .empty{background:var(--card);border:1.5px dashed var(--brand-2);border-radius:var(--r);padding:28px;text-align:center}
 .empty p{color:var(--muted);margin:6px 0 16px}
 .empty .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -434,7 +436,7 @@ body.private .top{padding-top:12px}
       <button class="btn ghost" id="lockBtn" title="Lock now (L)" hidden><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg><span class="t">Lock</span></button>
     </header>
     <main class="content" id="view" tabindex="-1"></main>
-    <div class="appfoot">Teachers Best Friend · Support Snapshot v1.1 · Teacher reference, not an official record</div>
+    <div class="appfoot">Teachers Best Friend · Support Snapshot v1.1.1 · Teacher reference, not an official record</div>
   </div>
 </div>
 <nav class="bottomnav" id="bnav" aria-label="Main"></nav>
@@ -457,7 +459,7 @@ body.private .top{padding-top:12px}
 <script>
 "use strict";
 /* ===== Support Snapshot v1 · Teachers Best Friend · runs fully offline ===== */
-const APP_VERSION="1.1";
+const APP_VERSION="1.1.1";
 const BANK_VERSION=3;
 const STORE_KEY="supportSnapshot.v1";
 const GROUPS={
@@ -536,7 +538,10 @@ const SYN={
   "social stories":["social story","social stories","social narrative"]
 };
 const PLAN_DEFAULTS=[{id:"iep",label:"IEP"},{id:"504",label:"504"},{id:"ell",label:""},{id:"read",label:"READ Plan"},{id:"other",label:"Other/Intervention"}];
-const TESTS=[["ela","CMAS ELA"],["math","CMAS Math"],["sci","CMAS Science"],["class","Class test"]];
+const TESTS=[["ela","CMAS ELA"],["math","CMAS Math"],["sci","CMAS Science"],["class","District/class test"]];
+const CMAS_SUBJ=[["math","Math"],["ela","ELA"],["sci","Science"]];
+/* CMAS proctor rule: only text-to-speech / test read-aloud, and only on Math (not "speech to text", not "re-read directions") */
+const isTTS=b=>!!b&&/text[- ]?to[- ]?speech|read[- ]?aloud|oral script/i.test(b.name)&&!/speech[- ]?to[- ]?text|direction/i.test(b.name);
 const STATUS={given:{n:"Provided",c:"s-ok",i:"check"},refused:{n:"Offered, not used",c:"s-ref",i:"ref"},na:{n:"Not needed",c:"s-na",i:"na"}};
 const DIAG_WORDS=/\b(adhd|add|autis\w*|asd|dyslex\w*|dyscalc\w*|dysgraph\w*|odd|ocd|anxiety disorder|depress\w*|bipolar|epilep\w*|diagnos\w*|disabilit\w*|learning disabled|sld|emotional disturbance|intellectual disab\w*|down syndrome|cerebral palsy|tourette\w*|ptsd)\b/i;
 
@@ -563,7 +568,7 @@ function weekKey(s){return ymd(weekStart(parseYmd(s)))}
 function weekLabel(ws){const f=new Date(ws);f.setDate(f.getDate()+4);return MON[ws.getMonth()]+" "+ws.getDate()+"–"+(f.getMonth()!==ws.getMonth()?MON[f.getMonth()]+" ":"")+f.getDate()}
 
 function blankState(){
-  return {v:1,settings:{ellLabel:"ELL",plans:PLAN_DEFAULTS.map(p=>({...p})),healthField:false,subStrengths:true,autoLockMin:10,hideOnBlur:false,textSize:100,contrast:false,backupDay:5,tests:{ela:"",math:"65",sci:"",class:""}},
+  return {v:1,settings:{ellLabel:"ELL",plans:PLAN_DEFAULTS.map(p=>({...p})),healthField:false,subStrengths:true,autoLockMin:10,hideOnBlur:false,textSize:100,contrast:false,backupDay:5,cmasTtsOnly:true,tests:{ela:"",math:"65",sci:"",class:""}},
     bank:DEFAULT_BANK.map(b=>({id:uid(),name:b[0],group:b[1],test:!!b[2],mult:b[3]||0})),
     classes:[],students:[],log:[],meta:{bankVersion:BANK_VERSION,demo:false,lastBackup:null,created:new Date().toISOString(),updated:null,welcomed:false},ui:{classId:null,layout:"rows"}};
 }
@@ -783,25 +788,30 @@ function fmtMin(m){const w=Math.floor(m),h=m-w;return (w||"")+(h>=0.5?"½":"")}
 function vTest(){
   const c=curClass();if(!c)return emptyRoster();
   const pool=UI.testAll?S.students:classStudents(c.id);
+  if(!TESTS.some(t=>t[0]===UI.test))UI.test="math";
   const tName=(TESTS.find(t=>t[0]===UI.test)||TESTS[0])[1];
   const mins=parseFloat(S.settings.tests[UI.test])||0;
-  const tb=S.bank.filter(b=>b.test).sort((a,b)=>(b.mult?1:0)-(a.mult?1:0)||["tst","env","ins","asg","lan","beh"].indexOf(a.group)-["tst","env","ins","asg","lan","beh"].indexOf(b.group)||a.name.localeCompare(b.name));
+  const cmas=UI.test!=="class",rule=cmas&&S.settings.cmasTtsOnly!==false;
+  const visible=b=>b&&b.test&&(!rule||(UI.test==="math"&&isTTS(b)));
+  const tb=S.bank.filter(visible).sort((a,b)=>(b.mult?1:0)-(a.mult?1:0)||["tst","env","ins","asg","lan","beh"].indexOf(a.group)-["tst","env","ins","asg","lan","beh"].indexOf(b.group)||a.name.localeCompare(b.name));
   const nameOf=s=>`${nmHTML(s)}${UI.testAll?` <span class="mini">(${esc((S.classes.find(c=>c.id===s.classId)||{}).name||"")})</span>`:""}`;
   const groups=tb.map(b=>{const kids=pool.filter(s=>s.supports.some(x=>x.sid===b.id)).sort((a,b)=>a.name.localeCompare(b.name));if(!kids.length)return "";
     const time=b.mult&&mins?`<div class="time">${fmtMin(mins*b.mult)} min<small>${mins} × ${b.mult}</small></div>`:"";
     return `<section class="grp"><header><div class="ic c-${b.group}">${ic(b.group)}</div><div><b>${esc(b.name)}</b><small>${kids.length} student${kids.length>1?"s":""}</small></div>${time}</header>
-      ${kids.map(s=>{const others=supSorted(s).filter(x=>x.b.test&&x.sid!==b.id);return `<div class="st"><b>${nameOf(s)}</b><div class="chips">${others.map(x=>chip(x.b)).join("")}</div>${usage(s,b.id)}</div>`}).join("")}</section>`}).join("");
-  const withClass=pool.filter(s=>!s.supports.some(x=>bankById(x.sid)?.test));
-  return `<div class="loghead"><div><h1>Test day list</h1><p class="sub">${esc(UI.testAll?"All classes":c.name)} · ${esc(tName)} · grouped by testing accommodation</p></div><div class="grow"></div>
+      ${kids.map(s=>{const others=supSorted(s).filter(x=>visible(x.b)&&x.sid!==b.id);return `<div class="st"><b>${nameOf(s)}</b><div class="chips">${others.map(x=>chip(x.b)).join("")}</div>${usage(s,b.id)}</div>`}).join("")}</section>`}).join("");
+  const withClass=pool.filter(s=>!s.supports.some(x=>visible(bankById(x.sid))));
+  return `<div class="loghead"><div><h1>Test day list</h1><p class="sub">${esc(UI.testAll?"All classes":c.name)} · ${esc(tName)} · ${rule?"proctor list (text-to-speech only)":"grouped by testing accommodation"}</p></div><div class="grow"></div>
     <button class="btn primary noprint" data-act="print">${ic("print")}Print for proctors</button></div>
   <div class="printonly" style="margin-top:6px;font-weight:700">Confidential. Return to the School Assessment Coordinator. Teacher reference, not an official record. Printed ${fmtD(new Date())}.</div>
   <div class="toolbar noprint" style="margin-top:14px">
-    <div class="seg" role="group" aria-label="Which test">${TESTS.map(t=>`<button data-act="test" data-v="${t[0]}" aria-pressed="${UI.test===t[0]}">${esc(t[1])}</button>`).join("")}</div>
+    <div class="seg" role="group" aria-label="Test type"><button data-act="testType" data-v="cmas" aria-pressed="${cmas}">State test (CMAS)</button><button data-act="testType" data-v="class" aria-pressed="${!cmas}">District/class test</button></div>
+    ${cmas?`<div class="seg" role="group" aria-label="CMAS subject">${CMAS_SUBJ.map(t=>`<button data-act="test" data-v="${t[0]}" aria-pressed="${UI.test===t[0]}">${esc(t[1])}</button>`).join("")}</div>`:""}
     <label class="chk" style="font-weight:700">Unit length <input type="number" min="0" max="600" step="1" style="width:90px" data-bind="testMin" value="${esc(S.settings.tests[UI.test])}" aria-label="Unit length in minutes"> min</label>
     <label class="chk"><input type="checkbox" data-act="testAll" ${UI.testAll?"checked":""}> All my classes</label>
   </div>
-  <div class="callout">${ic("shield")}<div><b>Give only what is in each plan.</b> Testing accommodations should match what the student uses regularly in class. Green shows weeks logged as provided. Check anything marked "check" with the case manager or your School Assessment Coordinator.${mins?"":" Enter the unit length to see extended-time minutes."}</div></div>
-  <div class="groups">${groups||`<div class="withclass">Everyone tests with the class this time.</div>`}
+  ${rule?`<div class="callout cmasnote">${ic("tst")}<div><b>CMAS proctor rule is on.</b> State test proctors see only text-to-speech (test read aloud), and only on Math. All other accommodations are hidden from this list and its printout. Change this in Setup → Labels and options. Use District/class test to see everything.</div></div>`:""}
+  <div class="callout noprint">${ic("shield")}<div><b>Give only what is in each plan.</b> Testing accommodations should match what the student uses regularly in class. Green shows weeks logged as provided. Check anything marked "check" with the case manager or your School Assessment Coordinator.${mins?"":" Enter the unit length to see extended-time minutes."}</div></div>
+  <div class="groups">${groups||(rule?`<div class="withclass noaccs"><b>No proctor-visible accommodations for this test.</b> CMAS ${esc(tName.replace("CMAS ",""))}: text-to-speech is for Math only, and other accommodations aren't shown to proctors. Everyone tests with the class.</div>`:`<div class="withclass">Everyone tests with the class this time.</div>`)}
   ${groups&&withClass.length?`<div class="withclass">${ic("users","i sm")} ${withClass.length} student${withClass.length>1?"s":""} test with the class: <span class="full">${withClass.map(s=>esc(s.name)).join(", ")}</span><span class="ini">${withClass.map(s=>esc(initials(s.name))).join(", ")}</span></div>`:""}</div>`;
 }
 
@@ -923,6 +933,8 @@ function vSetup(){
    <section class="panel"><h2>${ic("edit")} Labels and options</h2>
     <div class="field"><label for="ellL">Language-learner label</label><input id="ellL" type="text" maxlength="12" data-bind="ellLabel" value="${esc(S.settings.ellLabel)}"><small>For example ELL, ML, MLL, or EL.</small></div>
     ${S.settings.plans.filter(p=>p.id!=="ell").map(p=>`<div class="field"><label for="pl-${p.id}">Plan type label (${p.id==="other"?"other":esc(PLAN_DEFAULTS.find(d=>d.id===p.id)?.label||p.id)})</label><input id="pl-${p.id}" type="text" maxlength="24" data-bind="plan:${p.id}" value="${esc(p.label)}"></div>`).join("")}
+    <div class="opt"><label for="cmasR">CMAS proctor list: text-to-speech on Math only</label><input id="cmasR" type="checkbox" class="switch" data-bind="cmasTtsOnly" ${S.settings.cmasTtsOnly!==false?"checked":""}></div>
+    <p class="mini">On by default. For state tests (CMAS), the Test day list and printout show proctors only text-to-speech (test read aloud), and only on Math. ELA and Science show "No proctor-visible accommodations." District and class tests always show all testing accommodations. Turn this off to show all testing accommodations on CMAS too.</p>
     <div class="opt"><label for="hf">Must-know alert field (health or safety)</label><input id="hf" type="checkbox" class="switch" data-bind="healthField" ${S.settings.healthField?"checked":""}></div>
     <p class="mini">Off by default. When on, a short alert shows on the student card only. It never prints on the sub card. Keep medical details in your school's official system.</p>
    </section>
@@ -1373,7 +1385,8 @@ document.addEventListener("click",async e=>{
     case "strDel":if(s)change("Strength removed.",()=>{s.strengths.splice(Number(v),1);s.updated=new Date().toISOString()});break;
     case "editStudent":if(s)editStudentDlg(s);break;
     case "delStudent":if(s&&await confirmDlg("Delete "+s.name+"?","This removes the student and their log entries. You can undo right after.","Delete student",true)){const cid=s.classId;change(`Deleted ${s.name}.`,()=>{S.students=S.students.filter(x=>x.id!==s.id);S.log=S.log.filter(l=>l.studentId!==s.id);location.hash="#class"})}break;
-    case "test":UI.test=v;render();break;
+    case "test":UI.test=v;if(v!=="class")UI.lastCmas=v;render();break;
+    case "testType":UI.test=v==="class"?"class":(UI.lastCmas||"math");render();break;
     case "testAll":UI.testAll=t.checked;render();break;
     case "week":{const w=curWeek();UI.week=v==="0"?ymd(weekStart(new Date())):ymd(new Date(w.getFullYear(),w.getMonth(),w.getDate()+7*Number(v)));UI.log.date=null;render();break}
     case "logStu":UI.log.student=v;UI.log.support=null;render();break;
@@ -1496,21 +1509,52 @@ function iosTip(){
   d.querySelector("button").onclick=()=>{try{localStorage.setItem("supportSnapshot.iosTip","done")}catch(e){}d.remove()};
   document.body.appendChild(d);
 }
-function updateBar(worker){
+/* ---- updates (v1.1.1): reliable Reload on iPhone, no loops ---- */
+let SS_REG=null,SS_RELOADING=false;
+const UPD_KEY="supportSnapshot.updating";
+function safeSave(){try{if(typeof S!=="undefined"&&S&&typeof save==="function")save()}catch(e){}}
+function freshURL(){return location.pathname+"?v="+Date.now()+location.hash}
+function hardUpdate(){
+  /* Last resort when the waiting worker won't take over: drop the old worker + app cache, load fresh from the network. Your data (localStorage) is untouched. */
+  try{sessionStorage.setItem(UPD_KEY,"hard")}catch(e){}
+  const go=()=>location.replace(freshURL());
+  Promise.resolve(SS_REG&&SS_REG.unregister()).catch(()=>{})
+    .then(()=>window.caches?caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("support-snapshot-")).map(k=>caches.delete(k)))):0)
+    .catch(()=>{}).then(go,go);
+}
+function doUpdate(btn){
+  if(btn){btn.disabled=true;btn.textContent="Updating…"}
+  safeSave();
+  try{sessionStorage.setItem(UPD_KEY,String(Date.now()))}catch(e){}
+  const w=(SS_REG&&SS_REG.waiting)||null;            /* always the CURRENT waiting worker, never a stale one */
+  try{w&&w.postMessage({type:"SKIP_WAITING"})}catch(e){}
+  setTimeout(()=>{if(SS_RELOADING)return;            /* controllerchange already reloading */
+    if(navigator.onLine!==false)hardUpdate();else location.replace(freshURL())},w?2000:0);
+}
+function updateBar(){
   if(document.querySelector(".updbar"))return;
   const d=document.createElement("div");d.className="updbar";d.setAttribute("role","status");
   d.innerHTML=`<span>A new version of Support Snapshot is ready.</span><button type="button">Reload</button>`;
-  d.querySelector("button").onclick=()=>{worker.postMessage({type:"SKIP_WAITING"})};
+  d.querySelector("button").addEventListener("click",e=>doUpdate(e.currentTarget));
   document.body.appendChild(d);
 }
+function maybeBar(){
+  if(!SS_REG||!SS_REG.waiting||!navigator.serviceWorker.controller)return;
+  let flag=null;try{flag=sessionStorage.getItem(UPD_KEY)}catch(e){}
+  if(flag==="hard")return;                            /* already did a full refresh this session: never loop */
+  if(flag&&Date.now()-Number(flag)<60000){doUpdate(null);return}  /* we just tried and it's still waiting: escalate once */
+  updateBar();
+}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){
-  let reloading=false;const hadController=!!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloading||!hadController)return;reloading=true;save&&S&&save();location.reload()});
+  if(/[?&]v=\d+/.test(location.search)){try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}
+  const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(SS_RELOADING||!hadController)return;SS_RELOADING=true;safeSave();location.replace(freshURL())});
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./sw.js").then(reg=>{
-      if(reg.waiting&&navigator.serviceWorker.controller)updateBar(reg.waiting);
-      reg.addEventListener("updatefound",()=>{const w=reg.installing;w&&w.addEventListener("statechange",()=>{if(w.state==="installed"&&navigator.serviceWorker.controller)updateBar(w)})});
+    navigator.serviceWorker.register("./sw.js").then(reg=>{SS_REG=window.__ssReg=reg;
+      maybeBar();
+      reg.addEventListener("updatefound",()=>{const w=reg.installing;w&&w.addEventListener("statechange",()=>{if(w.state==="installed")maybeBar()})});
       document.addEventListener("visibilitychange",()=>{if(!document.hidden)reg.update().catch(()=>{})});
+      setTimeout(()=>{if(!reg.waiting){try{sessionStorage.removeItem(UPD_KEY)}catch(e){}}},5000);  /* updated fine: clear the flag */
     }).catch(()=>{});
   });
 }
