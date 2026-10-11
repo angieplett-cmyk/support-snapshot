@@ -153,6 +153,14 @@ h3{font-size:1.05rem;margin:0 0 8px}
 .svcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0 10px}
 .noaccs{background:var(--brand-tint);border:1.5px solid var(--brand-2);font-size:1rem}
 .cmasnote{border-color:var(--tst)}
+.code{display:inline-flex;align-items:center;min-height:30px;padding:2px 10px;border-radius:999px;background:var(--ink);color:#fff;font-weight:800;font-size:.82rem;letter-spacing:.02em}
+.nmeta{display:flex;gap:10px;flex-wrap:wrap;padding:8px 16px;font-weight:700;font-size:.9rem}
+.nmeta label{display:flex;gap:6px;align-items:center}
+.nmeta input{min-height:38px;padding:6px 10px;width:180px;border:1.5px solid var(--line);border-radius:10px;font:inherit}
+.setsel{min-height:38px;font-size:.85rem;padding:4px 8px;border-radius:10px;max-width:190px}
+.lsec{border-top:1px solid var(--line2);padding:8px 0}
+.lsec .nmeta{padding:8px 0}
+@media print{.nmeta input{border:0;padding:0;width:auto}.setsel{display:none}}
 .empty{background:var(--card);border:1.5px dashed var(--brand-2);border-radius:var(--r);padding:28px;text-align:center}
 .empty p{color:var(--muted);margin:6px 0 16px}
 .empty .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -327,6 +335,10 @@ dialog::backdrop{background:rgba(40,20,60,.45)}
   .maprow{grid-template-columns:minmax(0,1fr) auto}
   .maprow input{grid-column:1/-1;grid-row:2}
   .cklist{grid-template-columns:1fr}
+  .nmeta input{width:100%}
+  .nmeta label{flex:1 1 100%}
+  .ngrp .st{grid-template-columns:100px 1fr}
+  .ngrp .setsel{grid-column:1/-1;max-width:none}
 }
 @media (min-width:761px){ .top .brandm{display:none} .show-phone{display:none !important} }
 @media print{
@@ -436,7 +448,7 @@ body.private .top{padding-top:12px}
       <button class="btn ghost" id="lockBtn" title="Lock now (L)" hidden><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg><span class="t">Lock</span></button>
     </header>
     <main class="content" id="view" tabindex="-1"></main>
-    <div class="appfoot">Teachers Best Friend · Support Snapshot v1.1.1 · Teacher reference, not an official record</div>
+    <div class="appfoot">Teachers Best Friend · Support Snapshot v1.2 · Teacher reference, not an official record</div>
   </div>
 </div>
 <nav class="bottomnav" id="bnav" aria-label="Main"></nav>
@@ -459,8 +471,8 @@ body.private .top{padding-top:12px}
 <script>
 "use strict";
 /* ===== Support Snapshot v1 · Teachers Best Friend · runs fully offline ===== */
-const APP_VERSION="1.1.1";
-const BANK_VERSION=3;
+const APP_VERSION="1.2";
+const BANK_VERSION=4;
 const STORE_KEY="supportSnapshot.v1";
 const GROUPS={
   ins:{n:"Instruction",i:"ins",sub:"Read or repeat directions, or show it another way"},
@@ -479,7 +491,7 @@ const DEFAULT_BANK=[
   ["Decodable or leveled text","ins",0],["Extra phonics practice","ins",0],["Audiobooks","ins",0],["Guided reading group","ins",0],["Fluency practice","ins",0],
   ["Chunked assignments","asg",0],["Alternatives for long writing assignments","asg",0],["Reduced items","asg",1],["Vocabulary list, word bank, sentence stems","asg",1],["Math manipulatives","asg",1],["Calculator","asg",1],
   ["Typed response","asg",1],["Oral responses","asg",1],["Speech to text","asg",1],["Scribe","asg",1],["Highlighter","asg",1],
-  ["Extended time (1.5x)","tst",1,1.5],["Extended time (2x)","tst",1,2],["Extended time on math assessments","tst",1],["Test read aloud","tst",1],["Small group testing","tst",1],["Frequent breaks","tst",1],
+  ["Extended time (1.5x)","tst",1,1.5],["Extended time (2x)","tst",1,2],["Extended time on math assessments","tst",1],["Test read aloud","tst",1],["Small group testing","tst",1],["One-on-one testing","tst",1],["Stop-the-clock breaks","tst",1],["Frequent breaks","tst",1],
   ["Alternate testing location","env",1],["Teacher proximity / strong peer influence","env",1],["Flexible seating","env",0],
   ["Visual schedule","beh",0],["Token chart","beh",0],["Model social expectations","beh",0],["Social stories","beh",0],["Fidget","beh",0],["Movement breaks","beh",0],
   ["Bilingual glossary","lan",1],["Sentence frames","lan",0],["Partner in home language","lan",0],["Pre-teach vocabulary","lan",0]
@@ -508,6 +520,8 @@ const SYN={
   "extended time (2x)":["double time","2x","2 x","twice the time","200%","100% extra"],
   "frequent breaks":["breaks","break as needed","frequent breaks","stop the clock","stop-the-clock","rest breaks"],
   "small group testing":["small group","small-group","small groups"],
+  "one-on-one testing":["one-on-one","one on one","1:1","individual setting","individually"],
+  "stop-the-clock breaks":["stop the clock","stop-the-clock","pause the test","breaks without penalty"],
   "alternate testing location":["separate setting","separate room","separate location","alternate setting","alternate location","alternative setting","quiet room","quiet location","reduced distraction","distraction free","distraction-reduced"],
   "teacher proximity / strong peer influence":["preferential seating","seat near","seated near","seating near","near the teacher","front of the room","close to instruction","proximity","away from distractions"],
   "visual schedule":["visual schedule","picture schedule","visual timer","daily schedule"],
@@ -538,7 +552,7 @@ const SYN={
   "social stories":["social story","social stories","social narrative"]
 };
 const PLAN_DEFAULTS=[{id:"iep",label:"IEP"},{id:"504",label:"504"},{id:"ell",label:""},{id:"read",label:"READ Plan"},{id:"other",label:"Other/Intervention"}];
-const TESTS=[["ela","CMAS ELA"],["math","CMAS Math"],["sci","CMAS Science"],["class","District/class test"]];
+const TESTS=[["ela","CMAS ELA"],["math","CMAS Math"],["sci","CMAS Science"],["class","District/class test"],["nwea","NWEA MAP"]];
 const CMAS_SUBJ=[["math","Math"],["ela","ELA"],["sci","Science"]];
 /* CMAS proctor rule: only text-to-speech / test read-aloud, and only on Math (not "speech to text", not "re-read directions") */
 const isTTS=b=>!!b&&/text[- ]?to[- ]?speech|read[- ]?aloud|oral script/i.test(b.name)&&!/speech[- ]?to[- ]?text|direction/i.test(b.name);
@@ -568,7 +582,7 @@ function weekKey(s){return ymd(weekStart(parseYmd(s)))}
 function weekLabel(ws){const f=new Date(ws);f.setDate(f.getDate()+4);return MON[ws.getMonth()]+" "+ws.getDate()+"–"+(f.getMonth()!==ws.getMonth()?MON[f.getMonth()]+" ":"")+f.getDate()}
 
 function blankState(){
-  return {v:1,settings:{ellLabel:"ELL",plans:PLAN_DEFAULTS.map(p=>({...p})),healthField:false,subStrengths:true,autoLockMin:10,hideOnBlur:false,textSize:100,contrast:false,backupDay:5,cmasTtsOnly:true,tests:{ela:"",math:"65",sci:"",class:""}},
+  return {v:1,settings:{ellLabel:"ELL",plans:PLAN_DEFAULTS.map(p=>({...p})),healthField:false,subStrengths:true,autoLockMin:10,hideOnBlur:false,textSize:100,contrast:false,backupDay:5,cmasTtsOnly:true,nwea:{win:"BOY",w:{}},tests:{ela:"",math:"65",sci:"",class:""}},
     bank:DEFAULT_BANK.map(b=>({id:uid(),name:b[0],group:b[1],test:!!b[2],mult:b[3]||0})),
     classes:[],students:[],log:[],meta:{bankVersion:BANK_VERSION,demo:false,lastBackup:null,created:new Date().toISOString(),updated:null,welcomed:false},ui:{classId:null,layout:"rows"}};
 }
@@ -621,7 +635,7 @@ function migrate(st){
     st.bank.forEach(x=>{const nn=RENAMES[x.name.toLowerCase()];if(nn&&!st.bank.some(y=>y.name.toLowerCase()===nn.toLowerCase())){const d=DEFAULT_BANK.find(d=>d[0]===nn);x.name=nn;if(d){x.group=d[1];x.test=!!d[2]}}});
     DEFAULT_BANK.forEach(d=>{if(!st.bank.some(x=>x.name.toLowerCase()===d[0].toLowerCase()))st.bank.push({id:uid(),name:d[0],group:d[1],test:!!d[2],mult:d[3]||0})})}
   st.meta.bankVersion=BANK_VERSION;
-  st.students.forEach(s=>{s.services=s.services||[];s.plans=s.plans||[];s.supports=s.supports||[];s.strengths=s.strengths||[];s.notes=s.notes||"";s.alert=s.alert||""});
+  st.students.forEach(s=>{s.services=s.services||[];s.setting=s.setting||"";s.settingNote=s.settingNote||"";s.plans=s.plans||[];s.supports=s.supports||[];s.strengths=s.strengths||[];s.notes=s.notes||"";s.alert=s.alert||""});
   return st;
 }
 function validState(o){return o&&typeof o==="object"&&Array.isArray(o.students)&&Array.isArray(o.classes)}
@@ -771,7 +785,7 @@ function vStudent(){
   <div>
     <div class="panel"><b>Weekly log</b>${wks.length?`<div class="weeks">${wks.map(k=>wk[k].x?`<span class="x" title="Week of ${k}: offered, not used at least once">↺</span>`:`<span title="Week of ${k}">✓</span>`).join("")}</div><p class="mini" style="margin:0">${Object.keys(wk).length} week(s) logged${refused?` · ${refused} "offered, not used"`:""}.</p>`:`<p class="mini">No log entries yet.</p>`}</div>
     <div class="panel privhide"><div style="display:flex;justify-content:space-between;align-items:center"><b>IEP services</b><button class="linkbtn noprint" data-act="editStudent">Edit</button></div>${(s.services||[]).length?`<div class="chips" style="margin-top:8px">${s.services.map(v=>`<span class="chip c-svc">${esc(v)}</span>`).join("")}</div>`:`<p class="mini" style="margin:6px 0 0">None tagged. Tags only, no minutes.</p>`}</div>
-    <div class="panel"><b>Shows up on</b><dl class="kv" style="margin:10px 0 0"><dt>Test day</dt><dd>${tsup.length?esc(tsup.map(x=>x.b.name).join(", ")):"Tests with the class"}</dd><dt>Sub card</dt><dd>${esc(initials(s.name))} + ${new Set(sups.map(x=>x.b.group)).size} icon(s)</dd></dl></div>
+    <div class="panel"><b>Shows up on</b><dl class="kv" style="margin:10px 0 0"><dt>Test day</dt><dd>${tsup.length?esc(tsup.map(x=>x.b.name).join(", ")):"Tests with the class"}</dd><dt>NWEA group</dt><dd>${esc((NGROUPS.find(g=>g[0]===nweaGroup(s))||[])[1]||"")}${s.setting?"":" (from codes)"}</dd><dt>Sub card</dt><dd>${esc(initials(s.name))} + ${new Set(sups.map(x=>x.b.group)).size} icon(s)</dd></dl></div>
     <div class="panel noprint"><button class="btn danger" data-act="delStudent" style="width:100%">${ic("trash")}Delete this student</button></div>
   </div></div>`;
 }
@@ -791,7 +805,7 @@ function vTest(){
   if(!TESTS.some(t=>t[0]===UI.test))UI.test="math";
   const tName=(TESTS.find(t=>t[0]===UI.test)||TESTS[0])[1];
   const mins=parseFloat(S.settings.tests[UI.test])||0;
-  const cmas=UI.test!=="class",rule=cmas&&S.settings.cmasTtsOnly!==false;
+  const nwea=UI.test==="nwea";const cmas=UI.test!=="class"&&!nwea,rule=cmas&&S.settings.cmasTtsOnly!==false;
   const visible=b=>b&&b.test&&(!rule||(UI.test==="math"&&isTTS(b)));
   const tb=S.bank.filter(visible).sort((a,b)=>(b.mult?1:0)-(a.mult?1:0)||["tst","env","ins","asg","lan","beh"].indexOf(a.group)-["tst","env","ins","asg","lan","beh"].indexOf(b.group)||a.name.localeCompare(b.name));
   const nameOf=s=>`${nmHTML(s)}${UI.testAll?` <span class="mini">(${esc((S.classes.find(c=>c.id===s.classId)||{}).name||"")})</span>`:""}`;
@@ -800,19 +814,19 @@ function vTest(){
     return `<section class="grp"><header><div class="ic c-${b.group}">${ic(b.group)}</div><div><b>${esc(b.name)}</b><small>${kids.length} student${kids.length>1?"s":""}</small></div>${time}</header>
       ${kids.map(s=>{const others=supSorted(s).filter(x=>visible(x.b)&&x.sid!==b.id);return `<div class="st"><b>${nameOf(s)}</b><div class="chips">${others.map(x=>chip(x.b)).join("")}</div>${usage(s,b.id)}</div>`}).join("")}</section>`}).join("");
   const withClass=pool.filter(s=>!s.supports.some(x=>visible(bankById(x.sid))));
-  return `<div class="loghead"><div><h1>Test day list</h1><p class="sub">${esc(UI.testAll?"All classes":c.name)} · ${esc(tName)} · ${rule?"proctor list (text-to-speech only)":"grouped by testing accommodation"}</p></div><div class="grow"></div>
-    <button class="btn primary noprint" data-act="print">${ic("print")}Print for proctors</button></div>
+  return `<div class="loghead"><div><h1>Test day list</h1><p class="sub">${esc(UI.testAll?"All classes":c.name)} · ${esc(tName)}${nwea?` ${esc((S.settings.nwea||{}).win||"BOY")}`:""} · ${nwea?"grouped by testing setting":rule?"proctor list (text-to-speech only)":"grouped by testing accommodation"}</p></div><div class="grow"></div>
+    <button class="btn primary noprint" data-act="print">${ic("print")}${nwea?"Print NWEA groups":"Print for proctors"}</button></div>
   <div class="printonly" style="margin-top:6px;font-weight:700">Confidential. Return to the School Assessment Coordinator. Teacher reference, not an official record. Printed ${fmtD(new Date())}.</div>
   <div class="toolbar noprint" style="margin-top:14px">
-    <div class="seg" role="group" aria-label="Test type"><button data-act="testType" data-v="cmas" aria-pressed="${cmas}">State test (CMAS)</button><button data-act="testType" data-v="class" aria-pressed="${!cmas}">District/class test</button></div>
+    <div class="seg" role="group" aria-label="Test type"><button data-act="testType" data-v="cmas" aria-pressed="${cmas}">CMAS (state)</button><button data-act="testType" data-v="nwea" aria-pressed="${nwea}">NWEA MAP (district)</button><button data-act="testType" data-v="class" aria-pressed="${UI.test==="class"}">District/class test</button></div>
     ${cmas?`<div class="seg" role="group" aria-label="CMAS subject">${CMAS_SUBJ.map(t=>`<button data-act="test" data-v="${t[0]}" aria-pressed="${UI.test===t[0]}">${esc(t[1])}</button>`).join("")}</div>`:""}
-    <label class="chk" style="font-weight:700">Unit length <input type="number" min="0" max="600" step="1" style="width:90px" data-bind="testMin" value="${esc(S.settings.tests[UI.test])}" aria-label="Unit length in minutes"> min</label>
+    ${nwea?"":`<label class="chk" style="font-weight:700">Unit length <input type="number" min="0" max="600" step="1" style="width:90px" data-bind="testMin" value="${esc(S.settings.tests[UI.test])}" aria-label="Unit length in minutes"> min</label>`}
     <label class="chk"><input type="checkbox" data-act="testAll" ${UI.testAll?"checked":""}> All my classes</label>
   </div>
-  ${rule?`<div class="callout cmasnote">${ic("tst")}<div><b>CMAS proctor rule is on.</b> State test proctors see only text-to-speech (test read aloud), and only on Math. All other accommodations are hidden from this list and its printout. Change this in Setup → Labels and options. Use District/class test to see everything.</div></div>`:""}
+  ${nwea?vNwea(c,pool,nameOf):`  ${rule?`<div class="callout cmasnote">${ic("tst")}<div><b>CMAS proctor rule is on.</b> State test proctors see only text-to-speech (test read aloud), and only on Math. All other accommodations are hidden from this list and its printout. Change this in Setup → Labels and options. Use District/class test to see everything.</div></div>`:""}
   <div class="callout noprint">${ic("shield")}<div><b>Give only what is in each plan.</b> Testing accommodations should match what the student uses regularly in class. Green shows weeks logged as provided. Check anything marked "check" with the case manager or your School Assessment Coordinator.${mins?"":" Enter the unit length to see extended-time minutes."}</div></div>
   <div class="groups">${groups||(rule?`<div class="withclass noaccs"><b>No proctor-visible accommodations for this test.</b> CMAS ${esc(tName.replace("CMAS ",""))}: text-to-speech is for Math only, and other accommodations aren't shown to proctors. Everyone tests with the class.</div>`:`<div class="withclass">Everyone tests with the class this time.</div>`)}
-  ${groups&&withClass.length?`<div class="withclass">${ic("users","i sm")} ${withClass.length} student${withClass.length>1?"s":""} test with the class: <span class="full">${withClass.map(s=>esc(s.name)).join(", ")}</span><span class="ini">${withClass.map(s=>esc(initials(s.name))).join(", ")}</span></div>`:""}</div>`;
+  ${groups&&withClass.length?`<div class="withclass">${ic("users","i sm")} ${withClass.length} student${withClass.length>1?"s":""} test with the class: <span class="full">${withClass.map(s=>esc(s.name)).join(", ")}</span><span class="ini">${withClass.map(s=>esc(initials(s.name))).join(", ")}</span></div>`:""}`}</div>`;
 }
 
 /* ---------- Sub card ---------- */
@@ -901,7 +915,8 @@ function vSetup(){
    </section>
    <section class="panel" id="sec-import"><h2>${ic("upload")} Import from a spreadsheet</h2>
     <p class="mini" style="margin-top:0">Use an accommodations grid (.xlsx or .csv): student names down the first column, accommodations across the top, and checked boxes in the cells. Optional columns: Homeroom Teacher, Comments, and Plan. A second sheet of IEP services becomes tags. It works for IEP, 504, ELL, or READ Plan sheets. You'll see a preview before anything changes, and the file never leaves this device.</p>
-    <button class="btn primary" data-act="sheetImport">${ic("upload")}Choose spreadsheet</button>
+    <p class="mini">Testing lists work too: an NWEA MAP sheet with group titles (Accommodations Group, Text to Speech – Stays in Gen Ed., One-on-One, Can't sit in class), or plain rows of Last, First, Codes (SG, T2S, S2T, 1:1, stop the clock).</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sheetImport">${ic("upload")}Choose spreadsheet</button><button class="btn" data-act="pasteList">${ic("note")}Paste a testing list</button></div>
    </section>
    <section class="panel" id="sec-roster"><h2>${ic("users")} Add students</h2>
     <form data-form="roster">
@@ -981,14 +996,17 @@ function editStudentDlg(s){
    <div class="field"><label for="esName">Name</label><input id="esName" type="text" maxlength="40" value="${esc(s.name)}"><small>First name + last initial is safest.</small></div>
    <div class="field"><label for="esClass">Class</label><select id="esClass">${S.classes.map(c=>`<option value="${c.id}" ${c.id===s.classId?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
    <fieldset style="border:0;padding:0;margin:10px 0"><legend style="font-weight:700">Plan type</legend>${plans.map(p=>`<label class="chk"><input type="checkbox" name="plan" value="${p.id}" ${s.plans.includes(p.id)?"checked":""}> ${esc(planLabel(p.id))}</label>`).join("")}</fieldset>
+   <div class="field"><label for="esSet">Testing setting <small>(used for NWEA groups)</small></label><select id="esSet">${SETTINGS_T.map(([v,l])=>`<option value="${v}" ${(s.setting||"")===v?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+   <div class="field"><label for="esSetN">Setting note <small>(optional, for example Math/Reading)</small></label><input id="esSetN" type="text" maxlength="40" value="${esc(s.settingNote||"")}"></div>
+   <div class="field"><label for="esCant">Can't sit in class <small>(optional subjects, for example Math/Reading)</small></label><input id="esCant" type="text" maxlength="40" value="${esc(s.cantSit||"")}"></div>
    <div class="field"><label for="esLvl">${esc(planLabel("ell"))} level <small>(optional, for example a WIDA level 1–6)</small></label><input id="esLvl" type="text" maxlength="6" value="${esc(s.ellLevel||"")}"></div>
    <fieldset style="border:0;padding:0;margin:10px 0"><legend style="font-weight:700">IEP services <small class="hint">(tags only)</small></legend><div class="svcgrid">${SERVICES.sped.map(v=>`<label class="chk"><input type="checkbox" name="svc" value="${esc(v)}" ${(s.services||[]).includes(v)?"checked":""}> ${esc(v)}</label>`).join("")}</div><div class="mini" style="margin-top:6px">Related services</div><div class="svcgrid">${SERVICES.related.map(v=>`<label class="chk"><input type="checkbox" name="svc" value="${esc(v)}" ${(s.services||[]).includes(v)?"checked":""}> ${esc(v)}</label>`).join("")}</div></fieldset>
    ${S.settings.healthField?`<div class="field"><label for="esAlert">Must-know alert <small>(short; shows on this card only)</small></label><input id="esAlert" type="text" maxlength="80" value="${esc(s.alert||"")}"></div>`:""}
    <div class="acts"><button type="button" class="btn" data-x="no">Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`,d=>{
     d.querySelectorAll("[data-x=no]").forEach(x=>x.onclick=closeDlg);
     d.querySelector("form").onsubmit=e=>{e.preventDefault();const name=d.querySelector("#esName").value.trim();if(!name){d.querySelector("#esName").focus();return}
-      const pl=[...d.querySelectorAll("input[name=plan]:checked")].map(x=>x.value);const lvl=d.querySelector("#esLvl").value.trim();const al=d.querySelector("#esAlert");const cls=d.querySelector("#esClass").value;const svc=[...d.querySelectorAll("input[name=svc]:checked")].map(x=>x.value);closeDlg();
-      change("Student saved.",()=>{s.name=name;s.plans=pl;s.ellLevel=lvl;if(al)s.alert=al.value.trim();s.classId=cls;s.services=svc;s.updated=new Date().toISOString()})}});
+      const pl=[...d.querySelectorAll("input[name=plan]:checked")].map(x=>x.value);const lvl=d.querySelector("#esLvl").value.trim();const al=d.querySelector("#esAlert");const cls=d.querySelector("#esClass").value;const svc=[...d.querySelectorAll("input[name=svc]:checked")].map(x=>x.value);const tset=d.querySelector("#esSet").value,tnote=d.querySelector("#esSetN").value.trim(),tcant=d.querySelector("#esCant").value.trim();closeDlg();
+      change("Student saved.",()=>{s.name=name;s.plans=pl;s.ellLevel=lvl;if(al)s.alert=al.value.trim();s.classId=cls;s.services=svc;s.setting=tset;s.settingNote=tnote;s.cantSit=tcant;s.updated=new Date().toISOString()})}});
 }
 function bulkDlg(){
   const c=curClass();if(!c)return;const kids=classStudents(c.id);
@@ -1208,8 +1226,9 @@ async function importSheetFile(file){
     else if(/\.xlsx$/i.test(file.name))sheets=await parseXlsx(await file.arrayBuffer());
     else{toast("Please choose an .xlsx or .csv file.",null);return}
   }catch(e){toast(e.message==="NO_DECOMPRESS"?"This browser can't open .xlsx files. Save the sheet as CSV and import that.":"That file couldn't be read. Try saving it as .xlsx or .csv.",null);return}
-  const A=analyzeSheets(sheets,file.name);
-  if(!A.students.length){dlg(`<h2>No students found</h2><p>Support Snapshot looks for a grid: student names down the first column, accommodations across the top row, and checked boxes (TRUE, X, or Yes) in the cells.</p><div class="acts"><button class="btn primary" data-x="no">OK</button></div>`,d=>d.querySelector("[data-x=no]").onclick=closeDlg);return}
+  const A=analyzeSheets(sheets,file.name);const L=analyzeList(sheets);
+  if(L.some(s=>!s.plain&&s.studs.length)||(!A.students.length&&L.length)){listPreview(L,file.name);return}
+  if(!A.students.length){dlg(`<h2>No students found</h2><p>Support Snapshot looks for a grid, or a testing list (Last, First, Codes). For a grid: student names down the first column, accommodations across the top row, and checked boxes (TRUE, X, or Yes) in the cells.</p><div class="acts"><button class="btn primary" data-x="no">OK</button></div>`,d=>d.querySelector("[data-x=no]").onclick=closeDlg);return}
   importPreview(A);
 }
 function importPreview(A){
@@ -1272,6 +1291,133 @@ function applyImport(A,o){
     location.hash="#class";
   });
   toast(`Imported: ${created} new, ${merged} updated${newClasses?`, ${newClasses} new class${newClasses>1?"es":""}`:""}.`,()=>{S=migrate(JSON.parse(UNDO));save();render();toast("Undone.",null)});
+}
+
+/* ===== v1.2: NWEA MAP groups, testing setting, testing codes, list import ===== */
+const WINDOWS=["BOY","MOY","EOY"];
+const SETTINGS_T=[["","Not set (use testing supports)"],["gened","Gen ed"],["sg","Small group"],["1on1","One-on-one"],["other","Other / can't sit in class"]];
+const NGROUPS=[["sg","Accommodations group (small group)"],["tts","Stays in gen ed with text-to-speech"],["1on1","One-on-one testing"],["other","Can't sit in class / other setting"],["reg","Regular (tests with the class)"]];
+const CODES=[["sg","SG","Small group testing",/\bsg\b|small[- ]?group/],["t2s","T2S","Text-to-speech",/\bt2s\b|\btts\b|text[- ]?to[- ]?speech/],["s2t","S2T","Speech to text",/\bs2t\b|\bstt\b|speech[- ]?to[- ]?text/],["1on1","1:1","One-on-one testing",/1\s*:\s*1|\b1-1\b|one[- ]?on[- ]?one/],["stc","Stop-the-clock breaks","Stop-the-clock breaks",/stop[- ]?the[- ]?clock/]];
+const codeBank=k=>{const c=CODES.find(c=>c[0]===k);return c&&S.bank.find(b=>b.name.toLowerCase()===c[2].toLowerCase())};
+function ensureCodeBank(k){let b=codeBank(k);if(!b){const c=CODES.find(c=>c[0]===k);b={id:uid(),name:c[2],group:"tst",test:true,mult:0};S.bank.push(b)}return b}
+function hasCode(s,k){const b=codeBank(k);return !!b&&s.supports.some(x=>x.sid===b.id)||(k==="t2s"&&s.supports.some(x=>isTTS(bankById(x.sid))))}
+function parseCodes(v){if(v===true)return [];const l=cellStr(v).toLowerCase();return CODES.filter(c=>c[3].test(l)).map(c=>c[0])}
+function nweaGroup(s){const t=s.setting||"";
+  if(t==="1on1")return "1on1";if(t==="sg")return "sg";if(t==="other")return "other";
+  if(t==="gened")return hasCode(s,"t2s")?"tts":"reg";
+  if(hasCode(s,"1on1"))return "1on1";if(hasCode(s,"sg"))return "sg";if(hasCode(s,"t2s"))return "tts";return "reg"}
+function nweaCfg(win){const n=S.settings.nwea=S.settings.nwea||{win:"BOY",w:{}};n.w[win]=n.w[win]||{};NGROUPS.forEach(([g])=>{n.w[win][g]=n.w[win][g]||{p:"",l:""}});return n.w[win]}
+function vNwea(c,pool,nameOf){
+  const n=S.settings.nwea=S.settings.nwea||{win:"BOY",w:{}};const win=WINDOWS.includes(n.win)?n.win:"BOY";const cfg=nweaCfg(win);
+  const by={};NGROUPS.forEach(([g])=>by[g]=[]);pool.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{const g=nweaGroup(s);by[g].push(s);if(s.cantSit&&g!=="other")by.other.push(s)});
+  const codesOf=s=>CODES.filter(k=>hasCode(s,k[0])).map(k=>`<span class="code">${esc(k[1])}</span>`).join("");
+  const othersOf=s=>supSorted(s).filter(x=>x.b.test&&!CODES.some(k=>codeBank(k[0])&&codeBank(k[0]).id===x.sid)&&!(isTTS(x.b))).map(x=>chip(x.b)).join("");
+  const sec=([g,label])=>{const kids=by[g];if(g==="reg")return "";
+    const f=cfg[g];
+    return `<section class="grp ngrp" data-g="${g}"><header><div class="ic c-tst">${ic(g==="1on1"?"users":g==="tts"?"lan":"tst")}</div><div><b>${esc(label)}</b><small>${kids.length} student${kids.length===1?"":"s"} · ${win}</small></div></header>
+      <div class="nmeta"><label>Proctor <input type="text" maxlength="40" data-bind="nwea:${g}:p" value="${esc(f.p)}" placeholder="Name"></label><label>Location <input type="text" maxlength="60" data-bind="nwea:${g}:l" value="${esc(f.l)}" placeholder="Room"></label></div>
+      ${kids.length?kids.map(s=>`<div class="st"><b>${nameOf(s)}</b><div class="chips">${codesOf(s)}${othersOf(s)}${s.settingNote?`<span class="mini">${esc(s.settingNote)}</span>`:""}${s.cantSit?`<span class="mini"><b>Can't sit in class:</b> ${esc(s.cantSit)}</span>`:""}${g==="other"&&nweaGroup(s)!=="other"?`<span class="mini">(also in ${esc(NGROUPS.find(x=>x[0]===nweaGroup(s))[1])})</span>`:""}${s.setting?"":`<span class="used low fromcodes" title="Grouped from this student's testing supports. Set a Testing setting to confirm.">from supports · check</span>`}</div><select class="noprint setsel" data-setting="${s.id}" aria-label="Testing setting for ${esc(s.name)}">${SETTINGS_T.map(([v,t])=>`<option value="${v}" ${(s.setting||"")===v?"selected":""}>${esc(t)}</option>`).join("")}</select></div>`).join(""):`<div class="mini" style="padding:6px 0">No students.</div>`}</section>`};
+  return `<div class="toolbar noprint" style="margin-top:10px"><div class="seg" role="group" aria-label="Test window">${WINDOWS.map(w=>`<button data-act="nweaWin" data-v="${w}" aria-pressed="${w===win}">${w}</button>`).join("")}</div>
+    <button class="btn small" data-act="sheetImport">${ic("upload","i sm")}Import an NWEA list</button></div>
+  <div class="callout noprint">${ic("shield")}<div><b>NWEA MAP is a district test,</b> so every testing accommodation shows. Groups come from each student's <b>Testing setting</b> (on the student card, or the menu on each row). Students without one are placed by their testing supports and marked "check": SG → small group, 1:1 → one-on-one, T2S in gen ed → stays in class. Proctor and location are saved for ${win}.</div></div>
+  <div class="groups">${NGROUPS.map(sec).join("")}
+  <div class="withclass">${ic("users","i sm")} ${by.reg.length} test${by.reg.length===1?"s":""} with the class${by.reg.length?`: <span class="full">${by.reg.map(s=>esc(s.name)).join(", ")}</span><span class="ini">${by.reg.map(s=>esc(initials(s.name))).join(", ")}</span>`:""}</div>`;
+}
+/* ---- list layout: section titles + Last | First | codes (NWEA style) or a plain Last, First, Codes list ---- */
+const SEC_RX=[["sg",/accommodations?( groups?)?$|small group/i],["tts",/text[- ]?to[- ]?speech|gen\.? ?ed/i],["1on1",/one[- ]?on[- ]?one|1\s*:\s*1/i],["other",/can.?t sit|cannot sit|out of class/i]];
+function secType(t){const s=cellStr(t);if(!s||s.length>48||/^(scroll|students with|proctor|location)/i.test(s))return null;
+  const core=s.replace(/^\s*\d+(st|nd|rd|th)\s+grade\s*[-–—:]?\s*/i,"");if(core.length>40)return null;
+  for(const [g,rx] of SEC_RX){if(rx.test(core))return g}return null}
+const gradeOf=t=>{const m=/(\d+)(st|nd|rd|th)\s+grade/i.exec(cellStr(t));return m?m[1]:""};
+const oneName=v=>{const s=cellStr(v);return s.length>=2&&s.length<=30&&/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’.\- ]*$/.test(s)&&s.split(/\s+/).length<=3};
+function analyzeList(sheets){
+  const sections=[];
+  sheets.forEach(sh=>{const rows=sh.rows;const titles=[];
+    rows.forEach((r,ri)=>(r||[]).forEach((v,ci)=>{const g=secType(v);if(g&&!cellStr(r[ci+1])&&!cellStr(r[ci+2])&&!(ci>0&&cellStr(r[ci-1])))titles.push({ri,ci,g,title:cellStr(v),grade:gradeOf(v)})}));
+    if(!titles.length){ /* plain list: Last, First, Codes */
+      const studs=[];rows.forEach(r=>{if(!r)return;if(/^(last|name|student)/i.test(cellStr(r[0])))return;
+        if(oneName(r[0])&&oneName(r[1]))studs.push({last:cellStr(r[0]),first:cellStr(r[1]),codes:parseCodes(r[2]),flag:r[2]===true,raw:cellStr(r[2])});
+        else if(looksName(r[0])&&cellStr(r[0]).includes(" ")&&!oneName(r[1])){const p=cellStr(r[0]).includes(",")?cellStr(r[0]).split(",").map(x=>x.trim()):cellStr(r[0]).split(/\s+/).reverse();studs.push({last:p[0],first:p.slice(1).join(" "),codes:parseCodes(r[1]),raw:cellStr(r[1])})}});
+      if(studs.length)sections.push({sheet:sh.name,title:sh.name,g:"sg",grade:"",proctor:"",location:"",note:"",studs,plain:true});
+      return}
+    titles.sort((a,b)=>a.ci-b.ci||a.ri-b.ri);
+    titles.forEach((t,i)=>{let grade=t.grade;if(!grade){const prev=titles.filter(x=>x.ci===t.ci&&x.ri<t.ri&&x.grade).pop();grade=prev?prev.grade:""}
+      const next=titles.find(x=>x.ci===t.ci&&x.ri>t.ri);const end=next?next.ri:rows.length;
+      const sec={sheet:sh.name,title:t.title,g:t.g,grade,proctor:"",location:"",note:"",studs:[]};
+      for(let ri=t.ri+1;ri<end;ri++){const r=rows[ri]||[];const a=r[t.ci],b=r[t.ci+1],c=r[t.ci+2];const as=cellStr(a);
+        if(/^proctor\s*:/i.test(as)){sec.proctor=as.replace(/^proctor\s*:\s*/i,"").trim();continue}
+        if(/^location\s*:/i.test(as)){sec.location=as.replace(/^location\s*:\s*/i,"").trim();continue}
+        if(/^(ela|math|reading|science)\b.*$/i.test(as)&&!cellStr(b)){sec.note=as;continue}
+        if(oneName(a)&&oneName(b)&&!/^(ela|math|reading|science)/i.test(cellStr(b)))sec.studs.push({last:as,first:cellStr(b),codes:parseCodes(c),flag:c===true,raw:typeof c==="string"?c.trim():""});
+        else if(oneName(a)&&/^(ela|math|reading|science)/i.test(cellStr(b)))sec.studs.push({last:"",first:as,codes:[],raw:"",note:cellStr(b)});
+      }
+      sections.push(sec)});
+  });
+  return sections.filter(s=>s.studs.length||s.proctor||s.location);
+}
+function listMatch(st,shorten){
+  if(!st.last){const m=S.students.filter(s=>s.name.split(/\s+/)[0].toLowerCase()===st.first.toLowerCase());return m.length===1?m[0]:null}
+  const full=st.first+" "+st.last;return findExisting(full,shorten)}
+function listPreview(secs,fileName){
+  const grades=[...new Set(secs.map(s=>s.grade).filter(Boolean))].sort((a,b)=>a-b);
+  const sheetsN=[...new Set(secs.map(s=>s.sheet))];
+  const winOf=sh=>WINDOWS.find(w=>new RegExp("\\b"+w+"\\b","i").test(sh))||"";
+  const score=(g,sh)=>secs.filter(s=>(!g||s.grade===g)&&s.sheet===sh).reduce((a,s)=>a+s.studs.filter(x=>listMatch(x,true)).length,0);
+  let sheet=sheetsN.find(sh=>winOf(sh)===(S.settings.nwea&&S.settings.nwea.win))||sheetsN[0];
+  let grade=S.settings.nweaGrade&&grades.includes(S.settings.nweaGrade)?S.settings.nweaGrade:(grades.slice().sort((a,b)=>score(b,sheet)-score(a,sheet))[0]||"");
+  let win=winOf(sheet)||(S.settings.nwea&&S.settings.nwea.win)||"BOY";let shorten=true;let cls=curClass()?curClass().id:"__new";
+  const cur=()=>secs.filter(s=>s.sheet===sheet&&(!grade||!s.grade||s.grade===grade));
+  const draw=d=>{const list=cur();const total=list.reduce((a,s)=>a+s.studs.length,0);const matched=list.reduce((a,s)=>a+s.studs.filter(x=>listMatch(x,shorten)).length,0);
+    d.querySelector("#lpBody").innerHTML=`<p style="margin-top:0"><b>${total} student${total===1?"":"s"}</b> in ${list.length} group${list.length===1?"":"s"}. ${matched} already in the app (matched by name). Their testing setting and codes are added; nothing is removed.</p>
+     <div class="toolbar" style="gap:10px">${sheetsN.length>1?`<label>Sheet <select id="lpSheet">${sheetsN.map(s=>`<option ${s===sheet?"selected":""}>${esc(s)}</option>`).join("")}</select></label>`:""}
+      ${grades.length?`<label>Grade <select id="lpGrade">${grades.map(g=>`<option value="${g}" ${g===grade?"selected":""}>${g}${["","st","nd","rd"][g]||"th"} grade</option>`).join("")}</select></label>`:""}
+      <label>Test window <select id="lpWin">${WINDOWS.map(w=>`<option ${w===win?"selected":""}>${w}</option>`).join("")}</select></label></div>
+     ${list.map((s,i)=>`<div class="lsec"><div class="maprow2"><b>${esc(s.title)} <span class="mini">(${s.studs.length})</span></b><select data-lg="${i}" aria-label="Group for ${esc(s.title)}">${NGROUPS.filter(g=>g[0]!=="reg").map(([g,t])=>`<option value="${g}" ${s.g===g?"selected":""}>${esc(t)}</option>`).join("")}</select></div>
+       <div class="nmeta"><label>Proctor <input data-lp="${i}" value="${esc(s.proctor)}" maxlength="40"></label><label>Location <input data-ll="${i}" value="${esc(s.location)}" maxlength="60"></label></div>
+       <div class="mini">${s.studs.map(x=>`${esc(x.last?displayName(x.first+" "+x.last,shorten):x.first)}${x.codes.length?" ("+x.codes.map(k=>CODES.find(c=>c[0]===k)[1]).join(", ")+")":""}${listMatch(x,shorten)?" ✓":""}`).join(" · ")||"No students"}</div></div>`).join("")}
+     <div class="field"><label for="lpClass">New students go in</label><select id="lpClass">${S.classes.map(c=>`<option value="${c.id}" ${c.id===cls?"selected":""}>${esc(c.name)}</option>`).join("")}<option value="__new" ${cls==="__new"?"selected":""}>+ New class "NWEA list"</option></select><small>✓ = already in the app. First-name-only rows are matched only when one student has that first name.</small></div>
+     <label class="chk"><input type="checkbox" id="lpShort" ${shorten?"checked":""}> Shorten names to first name + last initial</label>`;
+    const b=d.querySelector("#lpBody");
+    const on=(sel,f)=>{const e=b.querySelector(sel);if(e)e.onchange=()=>{f(e.value);draw(d)}};
+    on("#lpSheet",v=>{sheet=v;win=winOf(v)||win});on("#lpGrade",v=>grade=v);on("#lpWin",v=>win=v);on("#lpClass",v=>cls=v);
+    b.querySelector("#lpShort").onchange=e=>{shorten=e.target.checked;draw(d)};
+    b.querySelectorAll("[data-lg]").forEach(x=>x.onchange=()=>{cur()[Number(x.dataset.lg)].g=x.value});
+    b.querySelectorAll("[data-lp]").forEach(x=>x.oninput=()=>{cur()[Number(x.dataset.lp)].proctor=x.value});
+    b.querySelectorAll("[data-ll]").forEach(x=>x.oninput=()=>{cur()[Number(x.dataset.ll)].location=x.value});
+    d.querySelector("#lpGo").textContent=`Import ${total} student${total===1?"":"s"}`;
+  };
+  dlg(`<h2>Testing groups import<button class="iconbtn" data-x="no" aria-label="Close">${ic("x")}</button></h2><div id="lpBody" style="max-height:62vh;overflow:auto;padding:2px"></div>
+    <div class="acts"><button class="btn" data-x="no">Cancel</button><button class="btn primary" id="lpGo">Import</button></div>`,d=>{draw(d);d.querySelectorAll("[data-x=no]").forEach(x=>x.onclick=closeDlg);
+    d.querySelector("#lpGo").onclick=()=>{const list=cur();closeDlg();applyList(list,{win,grade,shorten,cls})}});
+}
+function applyList(list,o){let created=0,updated=0,skipped=0;
+  change("",()=>{
+    let cls=o.cls;if(cls==="__new"){const c={id:uid(),name:"NWEA list",room:"",subNote:""};S.classes.push(c);cls=c.id}
+    const n=S.settings.nwea=S.settings.nwea||{win:"BOY",w:{}};n.win=o.win;if(o.grade)S.settings.nweaGrade=o.grade;const cfg=nweaCfg(o.win);
+    const setThisRun=new Set();
+    list.slice().sort((a,b)=>(a.g==="other")-(b.g==="other")).forEach(sec=>{if(sec.proctor)cfg[sec.g].p=sec.proctor;if(sec.location)cfg[sec.g].l=sec.location;
+      const setting={sg:"sg",tts:"gened","1on1":"1on1",other:"other"}[sec.g];
+      sec.studs.forEach(st=>{let s=listMatch(st,o.shorten);
+        if(!s){if(!st.last){skipped++;return}
+          const names=S.students.map(x=>x.name);let nm=displayName(st.first+" "+st.last,o.shorten);if(names.includes(nm))nm=st.first+" "+st.last;
+          s={id:uid(),classId:cls,name:nm,plans:[],ellLevel:"",supports:[],services:[],strengths:[],notes:"",alert:"",updated:new Date().toISOString()};S.students.push(s);created++}else updated++;
+        const note=st.note||sec.note;
+        if(sec.g==="other"){s.cantSit=st.note||note||"Yes";if(!setThisRun.has(s.id)&&!s.setting)s.setting="other"}
+        else{s.setting=setting;setThisRun.add(s.id)}
+        const codes=new Set(st.codes);if(sec.g==="tts"&&(st.flag||!codes.size))codes.add("t2s");if(sec.g==="1on1")codes.add("1on1");
+        codes.forEach(k=>{const b=ensureCodeBank(k);if(!s.supports.some(x=>x.sid===b.id))s.supports.push({sid:b.id,note:""})});
+        s.updated=new Date().toISOString()})});
+    S.meta.welcomed=true;UI.test="nwea";location.hash="#test";UI.testAll=true;
+  });
+  toast(`Testing groups imported: ${created} new, ${updated} updated${skipped?`, ${skipped} first-name-only row${skipped>1?"s":""} not matched`:""}.`,()=>{S=migrate(JSON.parse(UNDO));save();render();toast("Undone.",null)});
+}
+function pasteListDlg(){
+  dlg(`<h2>Paste a testing list<button class="iconbtn" data-x="no" aria-label="Close">${ic("x")}</button></h2>
+   <div class="field" style="margin-top:0"><label for="plText">Paste rows: Last, First, Codes <small>Copy cells straight from the NWEA sheet, or type one student per line. Codes: SG, T2S, S2T, 1:1, stop the clock.</small></label><textarea id="plText" placeholder="Group title (optional), e.g. 5th Grade Accommodations Group&#10;Proctor: Smith&#10;Lopez	Ana	SG, T2S&#10;Kim	Jun	T2S"></textarea></div>
+   <div class="acts"><button class="btn" data-x="no">Cancel</button><button class="btn primary" data-x="yes">Preview</button></div>`,d=>{
+    d.querySelector("[data-x=no]").onclick=closeDlg;
+    d.querySelector("[data-x=yes]").onclick=()=>{const t=d.querySelector("#plText").value;const rows=t.split(/\r?\n/).map(l=>{if(l.includes("\t"))return l.split("\t").map(x=>x.trim());const p=l.split(",").map(x=>x.trim());return p.length>2?[p[0],p[1],p.slice(2).join(", ")]:p});
+      const secs=analyzeList([{name:"Pasted list",rows}]);closeDlg();if(!secs.length){toast("No names found. Use Last, First, Codes on each line.",null);return}listPreview(secs,"pasted")}});
 }
 
 /* ---------- render + routing ---------- */
@@ -1386,7 +1532,9 @@ document.addEventListener("click",async e=>{
     case "editStudent":if(s)editStudentDlg(s);break;
     case "delStudent":if(s&&await confirmDlg("Delete "+s.name+"?","This removes the student and their log entries. You can undo right after.","Delete student",true)){const cid=s.classId;change(`Deleted ${s.name}.`,()=>{S.students=S.students.filter(x=>x.id!==s.id);S.log=S.log.filter(l=>l.studentId!==s.id);location.hash="#class"})}break;
     case "test":UI.test=v;if(v!=="class")UI.lastCmas=v;render();break;
-    case "testType":UI.test=v==="class"?"class":(UI.lastCmas||"math");render();break;
+    case "testType":UI.test=v==="class"||v==="nwea"?v:(UI.lastCmas||"math");if(v==="nwea"&&!UI.testAllSet){UI.testAll=true;UI.testAllSet=true}render();break;
+    case "nweaWin":change("",()=>{S.settings.nwea=S.settings.nwea||{w:{}};S.settings.nwea.win=v});break;
+    case "pasteList":pasteListDlg();break;
     case "testAll":UI.testAll=t.checked;render();break;
     case "week":{const w=curWeek();UI.week=v==="0"?ymd(weekStart(new Date())):ymd(new Date(w.getFullYear(),w.getMonth(),w.getDate()+7*Number(v)));UI.log.date=null;render();break}
     case "logStu":UI.log.student=v;UI.log.support=null;render();break;
@@ -1441,7 +1589,9 @@ document.addEventListener("change",e=>{
   if(t.id==="rShort"){rosterPreview();return}
   if(t.dataset.bank){const b=bankById(t.dataset.bank);const k=t.dataset.k;const val=t.type==="checkbox"?t.checked:t.value.trim();if(k==="name"&&!val){t.value=b.name;return}
     change(k==="name"?"Support renamed.":"Support updated.",()=>{b[k]=val;if(k==="name"){const m=val.match(/(\d(?:\.\d)?)\s*x\b/i);b.mult=m?parseFloat(m[1]):0}});return}
+  if(t.dataset.setting){const s=S.students.find(x=>x.id===t.dataset.setting);if(s)change("Testing setting saved.",()=>{s.setting=t.value;s.updated=new Date().toISOString()});return}
   const bind=t.dataset.bind;if(!bind)return;
+  if(bind.startsWith("nwea:")){const [,g,k]=bind.split(":");const n=S.settings.nwea=S.settings.nwea||{win:"BOY",w:{}};const cfg=nweaCfg(n.win||"BOY");change("",()=>{cfg[g][k]=t.value.trim()});return}
   const val=t.type==="checkbox"?t.checked:t.value;const c=curClass();const s=UI.sid&&S.students.find(x=>x.id===UI.sid);
   if(bind==="notes"&&s){change("Notes saved.",()=>{s.notes=val;s.updated=new Date().toISOString()});return}
   if(bind==="room"&&c){change("",()=>{c.room=val.trim()});return}
